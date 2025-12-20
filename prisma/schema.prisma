@@ -1,0 +1,64 @@
+// Configuração do Prisma para PostgreSQL
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Usuário (profissionais de saúde, administradores)
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // Hash bcrypt
+  nome      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+// Modelo de Paciente
+model Patient {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  cpf       String    @unique
+  dataNasc  DateTime
+  telefone  String?
+  email     String?
+  endereco  String?
+  
+  // Soft Delete (LGPD - Art. 16)
+  deletedAt DateTime?
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("patients")
+}
+
+// Modelo de Log de Auditoria (LGPD - Art. 37)
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   // LOGIN, CREATE_PATIENT, UPDATE_PATIENT, DELETE_PATIENT
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  details   Json?    // Detalhes da operação em JSON
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// Enum para controle de acesso baseado em papéis
+enum Role {
+  USER      // Usuário padrão
+  DOCTOR    // Médico
+  ADMIN     // Administrador
+}
